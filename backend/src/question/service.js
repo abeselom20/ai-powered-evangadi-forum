@@ -89,8 +89,10 @@ export const getQuestionsService = async ({ search, mine, userId }) => {
    // Get the ID of the newly created question
    const questionId = result.insertId;
  
+   // Declared outside try so the catch block below can use it too.
+   const sourceText = `${title}\n${content}`;
+
    try {
-         const sourceText = `${title}\n${content}`;
      const embedding = await getEmbedding(sourceText, "RETRIEVAL_DOCUMENT");
  
     await safeExecute(
@@ -108,7 +110,7 @@ export const getQuestionsService = async ({ search, mine, userId }) => {
      await safeExecute(
        `
          INSERT INTO question_vectors
-           (question_id, source_text, embedding, status)
+           (question_id, source_text, embedding_vector, status)
          VALUES (?, ?, ?, ?)
        `,
        [questionId, sourceText, JSON.stringify([]), "failed"],
@@ -162,7 +164,7 @@ export const searchQuestionsSemanticService = async ({
 
   // 2. Fetch vectors that were generated successfully.
   let vectorSql = `
-    SELECT qv.question_id, qv.embedding
+    SELECT qv.question_id, qv.embedding_vector
     FROM question_vectors qv
     JOIN questions q ON q.question_id = qv.question_id
     WHERE qv.status = 'ready'
@@ -177,9 +179,9 @@ export const searchQuestionsSemanticService = async ({
   // 3. Compute similarity
   const scored = vectorRows.map((row) => {
     const dbVector =
-      typeof row.embedding === "string"
-        ? JSON.parse(row.embedding)
-        : row.embedding;
+      typeof row.embedding_vector === "string"
+        ? JSON.parse(row.embedding_vector)
+        : row.embedding_vector;
     return {
       questionId: row.question_id,
       score: cosineSimilarity(queryEmbedding, dbVector),
