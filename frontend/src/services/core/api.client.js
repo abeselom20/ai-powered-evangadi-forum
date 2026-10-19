@@ -12,11 +12,24 @@ const apiClient = axios.create({
 });
 
 /**
+ * Reads the saved token safely. localStorage only stores strings, so a
+ * bad write like setItem("authToken", null) comes back as the text "null",
+ * which is truthy. Treat those leftovers as "no token".
+ */
+export function readStoredToken() {
+  const token = localStorage.getItem("authToken");
+  return token && token !== "null" && token !== "undefined" ? token : null;
+}
+
+/** Event name AuthContext listens for when the server rejects our token. */
+export const SESSION_EXPIRED_EVENT = "auth:session-expired";
+
+/**
  * Request interceptor to attach the JWT token to headers.
  */
 apiClient.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem("authToken");
+    const token = readStoredToken();
 
     if (token) {
       config.headers = config.headers || {};
@@ -44,10 +57,10 @@ apiClient.interceptors.response.use(
       error.config?.url?.includes("/api/auth/me");
 
     if (error.response?.status === 401 && !isAuthEndpoint) {
-      localStorage.removeItem("authToken");
-      localStorage.removeItem("activeUser");
-
-      window.location.href = "/auth";
+      // This file is not a React component, so it can't call useNavigate().
+      // Instead of a full page reload (window.location.href), announce the
+      // expired session; AuthContext hears it, clears state and navigates.
+      window.dispatchEvent(new Event(SESSION_EXPIRED_EVENT));
     }
 
     return Promise.reject(error);

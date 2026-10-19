@@ -1,11 +1,30 @@
-import { apiClient } from "../core/api.client.js";
+import { apiClient, readStoredToken } from "../core/api.client.js";
+
+// Saves token + user after a successful login or register.
+function saveSession(token, user) {
+  if (token) {
+    localStorage.setItem("authToken", token);
+    apiClient.defaults.headers.common["Authorization"] = `Bearer ${token}`;
+  }
+  if (user) {
+    localStorage.setItem("activeUser", JSON.stringify(user));
+  }
+}
 
 async function registerAccount(formData) {
   try {
-    clearSessionData(); 
+    clearSessionData();
     const res = await apiClient.post("/api/auth/register", formData);
-    return { user: res.data.user };
+
+    // The backend now returns a token on register, so the new user is
+    // signed in right away instead of being asked to log in again.
+    const token = res.data.accessToken || res.data.token;
+    const user = res.data.user;
+    saveSession(token, user);
+
+    return { user, token };
   } catch (err) {
+    clearSessionData();
     throw parseAuthException(err);
   }
 }
@@ -19,14 +38,7 @@ async function loginAccount(credentials) {
     const token = res.data.accessToken || res.data.token;
     const user = res.data.user;
 
-    if (token) {
-      localStorage.setItem("authToken", token);
-      apiClient.defaults.headers.common["Authorization"] = `Bearer ${token}`;
-    }
-
-    if (user) {
-      localStorage.setItem("activeUser", JSON.stringify(user));
-    }
+    saveSession(token, user);
 
     return { user, token };
   } catch (err) {
@@ -59,7 +71,7 @@ function clearSessionData() {
 }
 
 function retrieveAuthToken() {
-  return localStorage.getItem("authToken");
+  return readStoredToken();
 }
 
 function retrieveCachedUser() {

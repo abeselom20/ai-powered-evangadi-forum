@@ -8,7 +8,7 @@ import {
 export const handleUserRegistration = async (req, res, next) => {
   try {
     const { firstName, lastName, email, password } = req.body;
-    const createdUser = await createNewUserAccount({
+    const { user, accessToken } = await createNewUserAccount({
       firstName,
       lastName,
       email,
@@ -17,7 +17,8 @@ export const handleUserRegistration = async (req, res, next) => {
     res.status(StatusCodes.CREATED).json({
       success: true,
       message: "User account created successfully.",
-      user: createdUser,
+      user,
+      token: accessToken,
     });
   } catch (error) {
     next(error);

@@ -121,14 +121,14 @@ export default function Auth() {
                 });
 
                 if (response?.success) {
-                    setAuthSuccessNotice('Account created successfully! Switching to sign in...');
+                    setAuthSuccessNotice('Account created! Taking you to your dashboard...');
                     setFnameInput('');
                     setLnameInput('');
+                    setPassInput('');
 
-                    setTimeout(() => {
-                        setIsSignInMode(true);
-                        setAuthSuccessNotice(null);
-                    }, 1500);
+                    await new Promise(res => setTimeout(res, 800));
+                    const targetPath = location.state?.from?.pathname || '/dashboard';
+                    navigate(targetPath, { replace: true });
                 }
             }
         } catch (err) {

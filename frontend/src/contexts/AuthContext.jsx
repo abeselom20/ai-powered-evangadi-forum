@@ -1,6 +1,7 @@
 import { createContext, useContext, useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { authService } from '../services/auth/auth.service.js';
+import { SESSION_EXPIRED_EVENT } from '../services/core/api.client.js';
 
 const AuthContext = createContext(undefined);
 
@@ -32,14 +33,29 @@ export function AuthProvider({ children }) {
     initializeAuthStatus();
   }, []);
 
+  // api.client.js fires this event when any request comes back 401
+  // (expired/invalid token). We handle it here because only a component
+  // inside the router can use navigate() — no full page reload needed.
+  useEffect(() => {
+    const handleSessionExpired = () => {
+      authService.clearSessionData();
+      setCurrentUser(null);
+      navigate('/auth', { replace: true });
+    };
+
+    window.addEventListener(SESSION_EXPIRED_EVENT, handleSessionExpired);
+    return () => window.removeEventListener(SESSION_EXPIRED_EVENT, handleSessionExpired);
+  }, [navigate]);
+
   const clearAuthError = () => setAuthError(null);
 
   const signup = async data => {
     setIsAuthenticating(true);
     setAuthError(null);
     try {
-      const result = await authService.registerAccount(data);
-      return { success: true, user: result.user };
+      const { user } = await authService.registerAccount(data);
+      setCurrentUser(user); // signed in immediately after registering
+      return { success: true, user };
     } catch (err) {
       const errorMsg = err.message || 'Registration failed. Please try again.';
       setAuthError(errorMsg);

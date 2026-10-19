@@ -16,6 +16,20 @@ if (!JWT_SECRET) {
 
 const cleanEmailInput = (rawEmail) => rawEmail.trim().toLowerCase();
 
+// One place that builds the JWT, shared by register and login so both
+// endpoints hand out exactly the same kind of token.
+const issueAccessToken = (user) =>
+  jwt.sign(
+    {
+      id: user.id,
+      email: user.email,
+      firstName: user.firstName,
+      lastName: user.lastName,
+    },
+    JWT_SECRET,
+    { expiresIn: JWT_EXPIRES_IN },
+  );
+
 export const isEmailAlreadyRegistered = async (userEmail) => {
   const formattedEmail = cleanEmailInput(userEmail);
   const query = "SELECT user_id FROM users WHERE email = ? LIMIT 1";
@@ -57,12 +71,15 @@ export const createNewUserAccount = async ({
     throw err;
   }
 
-  return {
+  const user = {
     id: queryResult.insertId,
     firstName,
     lastName,
     email: formattedEmail,
   };
+
+  // Log the new user straight in: return a token alongside the profile.
+  return { user, accessToken: issueAccessToken(user) };
 };
 
 // Renamed Service Method 2
@@ -82,26 +99,14 @@ export const authenticateUserAccount = async ({ email, password }) => {
     throw new UnauthenticatedError("Invalid credentials provided.");
   }
 
-  const tokenPayload = {
+  const user = {
     id: account.user_id,
-    email: account.email,
     firstName: account.first_name,
     lastName: account.last_name,
+    email: account.email,
   };
 
-  const accessToken = jwt.sign(tokenPayload, JWT_SECRET, {
-    expiresIn: JWT_EXPIRES_IN,
-  });
-
-  return {
-    user: {
-      id: account.user_id,
-      firstName: account.first_name,
-      lastName: account.last_name,
-      email: account.email,
-    },
-    accessToken,
-  };
+  return { user, accessToken: issueAccessToken(user) };
 };
 
 // Renamed Service Method 3

@@ -78,16 +78,16 @@ export default function Layout() {
               </p>
             </div>
             <nav className={styles.footerNavigation}>
-              <a href='#' className={styles.footerNavLink}>
+              <a href="#" className={styles.footerNavLink}>
                 About
               </a>
-              <a href='#' className={styles.footerNavLink}>
+              <a href="#" className={styles.footerNavLink}>
                 Privacy
               </a>
-              <a href='#' className={styles.footerNavLink}>
+              <a href="#" className={styles.footerNavLink}>
                 Terms
               </a>
-              <a href='#' className={styles.footerNavLink}>
+              <a href="#" className={styles.footerNavLink}>
                 Contact
               </a>
             </nav>
